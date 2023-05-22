@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Minesweeper Multiplayer</title>
+  <style>
+    #container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 96vh;
+    }
+    .board {
+      display: inline-block;
+      border-collapse: collapse;
+    }
+
+    .board td {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        background-color: #426de7;
+        text-align: center;
+        font-size: 12px;
+        padding: 8px;
+        border-radius: 5px;
+        box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    }
+
+    .board .revealed {
+      background-color: #fff;
+    }
+
+    .reset-button {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+    <div id="container">
+        <div style="display: grid;">
+            <table class="board" id="board"></table>
+            <button class="reset-button" onclick="resetGame()">Reset Game</button>
+        </div>
+    </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.1/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    // 游戏板元素
+    const boardElement = document.getElementById('board');
+
+    // 监听游戏状态更新事件
+    socket.on('gameState', (gameBoard) => {
+      renderGameBoard(gameBoard);
+    });
+
+    // 监听游戏结束事件
+    socket.on('gameOver', () => {
+      alert('Game over! You lose!');
+    });
+
+    // 监听游戏重置事件
+    socket.on('gameReset', () => {
+      alert('Game reset!');
+    //   socket.emit('requestGameState');
+    });
+
+    // 监听游戏胜利事件
+    socket.on('gameWin', () => {
+      alert('You Win!');
+    });
+
+
+    // 渲染游戏板
+    function renderGameBoard(gameBoard) {
+      boardElement.innerHTML = '';
+      for (let i = 0; i < gameBoard.length; i++) {
+        const row = document.createElement('tr');
+        for (let j = 0; j < gameBoard[i].length; j++) {
+          const cell = document.createElement('td');
+          cell.addEventListener('click', () => revealCell(i, j));
+          cell.addEventListener('contextmenu', (e) => markCell(e, i, j));
+          if (gameBoard[i][j].revealed) {
+            cell.classList.add('revealed');
+            if (gameBoard[i][j].hasMine) {
+              cell.innerText = '💥';
+            } else {
+              const minesCount = countAdjacentMines(gameBoard, i, j);
+              cell.innerText = minesCount > 0 ? minesCount : '';
+              //根据minesCount的值给cell不同的文字颜色,值为1-5的整数，使用switch
+              switch (minesCount) { 
+                 case 1: cell.style.color = '#34aabd'; break;
+                 case 2: cell.style.color = '#94ba08'; break;
+                 case 3: cell.style.color = '#58c439'; break;
+                 case 4: cell.style.color = '#ae55bd'; break;
+                 case 5: cell.style.color = '#ce2010'; break;
+                default: cell.style.color = '#f0ad4e'; break;
+              } 
+              
+            }
+            
+          } else if (gameBoard[i][j].marked) {
+            cell.innerText = '🚩';
+          }
+          row.appendChild(cell);
+        }
+        boardElement.appendChild(row);
+      }
+    }
+
+    // 点击格子
+    function revealCell(row, col) {
+      socket.emit('revealCell', { row, col });
+    }
+
+    // 右键标记格子
+    function markCell(e, row, col) {
+      e.preventDefault();
+      socket.emit('markCell', { row, col });
+    }
+
+    // 计算相邻格子的地雷数
+    function countAdjacentMines(gameBoard, row, col) {
+      const rows = gameBoard.length;
+      const cols = gameBoard[0].length;
+      let count = 0;
+      for (let i = row - 1; i <= row + 1; i++) {
+        for (let j = col - 1; j <= col + 1; j++) {
+          if (i >= 0 && i < rows && j >= 0 && j < cols && !(i === row && j === col) && gameBoard[i][j].hasMine) {
+            count++;
+          }
+        }
+      }
+      return count;
+    }
+
+    // 重置游戏
+    function resetGame() {
+      socket.emit('resetGame');
+    }
+  </script>
+</body>
+</html>
