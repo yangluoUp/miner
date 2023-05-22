@@ -15,9 +15,6 @@ jobs:
         with:
           node-version: '14.x'
       - run: npm install
-      - run: npm run build
+      - run: npm start
       - name: Deploy to Github Pages
         uses: JamesIves/github-pages-deploy-action@4.1.4
-        with:
-          branch: gh-pages
-          folder: dist/
